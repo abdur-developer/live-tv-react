@@ -62,22 +62,18 @@ const VideoPlayer = ({ channel, onError, onLoad }) => {
       if (Hls.isSupported()) {
         const hls = new Hls({
           enableWorker: true,
-          lowLatencyMode: false, // lowLatency বন্ধ রাখুন
+          lowLatencyMode: false,
           backBufferLength: 90,
           maxBufferLength: 30,
           maxMaxBufferLength: 600,
-          liveSyncDurationCount: 3,
-          liveMaxLatencyDurationCount: 10,
           fragLoadingTimeOut: 20000,
           manifestLoadingTimeOut: 20000,
           levelLoadingTimeOut: 20000,
-          // User-Agent সেট করবেন না
-          xhrSetup: function (xhr, url) {
-            // শুধু এগুলো রাখুন
+          xhrSetup: function(xhr, url) {
             xhr.withCredentials = false;
           }
         });
-
+        console.log('Loading stream:', channel.url);
         // Error handling improve
         hls.on(Hls.Events.ERROR, function (event, data) {
           if (data.fatal) {
