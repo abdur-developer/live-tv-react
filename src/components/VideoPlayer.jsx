@@ -57,42 +57,44 @@ const VideoPlayer = ({ channel, onError, onLoad }) => {
 
     const initializePlayer = () => {
       // VideoPlayer.jsx - HLS initialization অংশে
+      // VideoPlayer.jsx - HLS initialization section (লাইন ৫০-১০০ এর কাছাকাছি)
+
       if (Hls.isSupported()) {
         const hls = new Hls({
           enableWorker: true,
-          lowLatencyMode: true,
+          lowLatencyMode: false, // lowLatency বন্ধ রাখুন
           backBufferLength: 90,
           maxBufferLength: 30,
           maxMaxBufferLength: 600,
           liveSyncDurationCount: 3,
           liveMaxLatencyDurationCount: 10,
-          // নিচের কনফিগ গুলো যোগ করুন
-          xhrSetup: function (xhr, url) {
-            xhr.withCredentials = false;
-            xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
-            // VLC User-Agent ব্যবহার করি
-            xhr.setRequestHeader('User-Agent', 'VLC/3.0.18 LibVLC/3.0.18');
-          },
-          // CORS error গুলো ignore করতে
           fragLoadingTimeOut: 20000,
           manifestLoadingTimeOut: 20000,
           levelLoadingTimeOut: 20000,
+          // User-Agent সেট করবেন না
+          xhrSetup: function (xhr, url) {
+            // শুধু এগুলো রাখুন
+            xhr.withCredentials = false;
+          }
         });
 
-        // HLS error handling
+        // Error handling improve
         hls.on(Hls.Events.ERROR, function (event, data) {
           if (data.fatal) {
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
-                console.log('Network error, retrying...');
-                hls.startLoad();
+                console.log('Network error, retrying in 2s...');
+                setTimeout(() => {
+                  hls.startLoad();
+                }, 2000);
                 break;
               case Hls.ErrorTypes.MEDIA_ERROR:
                 console.log('Media error, recovering...');
                 hls.recoverMediaError();
                 break;
               default:
-                console.error('Fatal error, destroying...');
+                console.log('Fatal error, cannot recover');
+                setError('Stream temporarily unavailable');
                 hls.destroy();
                 break;
             }
