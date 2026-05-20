@@ -1,12 +1,12 @@
 // components/VideoPlayer.jsx - Complete Fixed Version
 import { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
-import { 
-  Play, 
-  Pause, 
-  Volume2, 
-  VolumeX, 
-  Maximize, 
+import {
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Maximize,
   Minimize,
   Loader,
   AlertTriangle,
@@ -22,7 +22,7 @@ const VideoPlayer = ({ channel, onError, onLoad }) => {
   const containerRef = useRef(null);
   const hlsRef = useRef(null);
   const progressRef = useRef(null);
-  
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -37,7 +37,7 @@ const VideoPlayer = ({ channel, onError, onLoad }) => {
   const [levels, setLevels] = useState([]);
   const [currentLevel, setCurrentLevel] = useState(-1);
   const [retryCount, setRetryCount] = useState(0);
-  
+
   let controlsTimeout;
 
   // Initialize HLS
@@ -56,6 +56,7 @@ const VideoPlayer = ({ channel, onError, onLoad }) => {
     setRetryCount(0);
 
     const initializePlayer = () => {
+      // VideoPlayer.jsx - HLS initialization অংশে
       if (Hls.isSupported()) {
         const hls = new Hls({
           enableWorker: true,
@@ -65,41 +66,46 @@ const VideoPlayer = ({ channel, onError, onLoad }) => {
           maxMaxBufferLength: 600,
           liveSyncDurationCount: 3,
           liveMaxLatencyDurationCount: 10,
+          // নিচের কনফিগ গুলো যোগ করুন
+          xhrSetup: function (xhr, url) {
+            xhr.withCredentials = false;
+            xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
+            // VLC User-Agent ব্যবহার করি
+            xhr.setRequestHeader('User-Agent', 'VLC/3.0.18 LibVLC/3.0.18');
+          },
+          // CORS error গুলো ignore করতে
+          fragLoadingTimeOut: 20000,
+          manifestLoadingTimeOut: 20000,
+          levelLoadingTimeOut: 20000,
+        });
+
+        // HLS error handling
+        hls.on(Hls.Events.ERROR, function (event, data) {
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                console.log('Network error, retrying...');
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                console.log('Media error, recovering...');
+                hls.recoverMediaError();
+                break;
+              default:
+                console.error('Fatal error, destroying...');
+                hls.destroy();
+                break;
+            }
+          }
         });
 
         hls.loadSource(channel.url);
         hls.attachMedia(video);
 
-        hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
           setIsLoading(false);
-          setLevels(data.levels);
-          setCurrentLevel(hls.currentLevel);
-          video.play().catch(() => {});
+          video.play().catch(() => { });
           onLoad?.();
-        });
-
-        hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
-          setCurrentLevel(data.level);
-        });
-
-        hls.on(Hls.Events.ERROR, (event, data) => {
-          if (data.fatal) {
-            switch (data.type) {
-              case Hls.ErrorTypes.NETWORK_ERROR:
-                setError('Network error. Retrying...');
-                hls.startLoad();
-                break;
-              case Hls.ErrorTypes.MEDIA_ERROR:
-                setError('Media error. Recovering...');
-                hls.recoverMediaError();
-                break;
-              default:
-                setError('Stream unavailable. Please try again.');
-                hls.destroy();
-                break;
-            }
-            onError?.(data);
-          }
         });
 
         hlsRef.current = hls;
@@ -107,7 +113,7 @@ const VideoPlayer = ({ channel, onError, onLoad }) => {
         video.src = channel.url;
         video.addEventListener('loadedmetadata', () => {
           setIsLoading(false);
-          video.play().catch(() => {});
+          video.play().catch(() => { });
           onLoad?.();
         });
       } else {
@@ -130,7 +136,7 @@ const VideoPlayer = ({ channel, onError, onLoad }) => {
     const handleKeyPress = (e) => {
       if (!channel) return;
 
-      switch(e.key.toLowerCase()) {
+      switch (e.key.toLowerCase()) {
         case ' ':
         case 'k':
           e.preventDefault();
@@ -213,7 +219,7 @@ const VideoPlayer = ({ channel, onError, onLoad }) => {
     const video = videoRef.current;
     if (video) {
       if (video.paused) {
-        video.play().then(() => setIsPlaying(true)).catch(() => {});
+        video.play().then(() => setIsPlaying(true)).catch(() => { });
       } else {
         video.pause();
         setIsPlaying(false);
@@ -243,9 +249,9 @@ const VideoPlayer = ({ channel, onError, onLoad }) => {
   const toggleFullscreen = () => {
     const container = containerRef.current;
     if (!document.fullscreenElement) {
-      container?.requestFullscreen().catch(() => {});
+      container?.requestFullscreen().catch(() => { });
     } else {
-      document.exitFullscreen().catch(() => {});
+      document.exitFullscreen().catch(() => { });
     }
   };
 
@@ -275,7 +281,7 @@ const VideoPlayer = ({ channel, onError, onLoad }) => {
   const skipForward = () => {
     if (videoRef.current) {
       videoRef.current.currentTime = Math.min(
-        videoRef.current.currentTime + 10, 
+        videoRef.current.currentTime + 10,
         videoRef.current.duration || Infinity
       );
     }
@@ -284,7 +290,7 @@ const VideoPlayer = ({ channel, onError, onLoad }) => {
   const skipBackward = () => {
     if (videoRef.current) {
       videoRef.current.currentTime = Math.max(
-        videoRef.current.currentTime - 10, 
+        videoRef.current.currentTime - 10,
         0
       );
     }
@@ -301,34 +307,34 @@ const VideoPlayer = ({ channel, onError, onLoad }) => {
     setError(null);
     setIsLoading(true);
     setRetryCount(prev => prev + 1);
-    
+
     if (hlsRef.current) {
       hlsRef.current.destroy();
     }
-    
+
     if (Hls.isSupported()) {
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
         backBufferLength: 90,
       });
-      
+
       hls.loadSource(channel.url);
       hls.attachMedia(videoRef.current);
-      
+
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         setIsLoading(false);
-        videoRef.current?.play().catch(() => {});
+        videoRef.current?.play().catch(() => { });
         onLoad?.();
       });
-      
+
       hls.on(Hls.Events.ERROR, (event, data) => {
         if (data.fatal) {
           setError('Stream failed to load. Please try again.');
           onError?.(data);
         }
       });
-      
+
       hlsRef.current = hls;
     }
   };
@@ -353,7 +359,7 @@ const VideoPlayer = ({ channel, onError, onLoad }) => {
   };
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="relative w-full aspect-video bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-2xl overflow-hidden shadow-2xl shadow-black/50 group"
       onMouseEnter={() => { setIsHovering(true); showControlsTemporarily(); }}
@@ -436,30 +442,29 @@ const VideoPlayer = ({ channel, onError, onLoad }) => {
       )}
 
       {/* Custom Controls */}
-      <div 
-        className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent transition-all duration-500 z-30 ${
-          showControls || !isPlaying ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-        }`}
+      <div
+        className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent transition-all duration-500 z-30 ${showControls || !isPlaying ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
       >
         {/* Progress Bar */}
         <div className="px-4 mb-2">
-          <div 
+          <div
             ref={progressRef}
             className="relative w-full h-2 bg-white/10 rounded-full cursor-pointer group/progress hover:h-3 transition-all"
             onClick={handleSeek}
           >
             {/* Buffered */}
-            <div 
+            <div
               className="absolute top-0 left-0 h-full bg-white/20 rounded-full"
               style={{ width: `${buffered}%` }}
             />
             {/* Played */}
-            <div 
+            <div
               className="absolute top-0 left-0 h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"
               style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
             />
             {/* Thumb */}
-            <div 
+            <div
               className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full shadow-lg shadow-purple-500/50 opacity-0 group-hover/progress:opacity-100 transition-all"
               style={{ left: `${duration ? (currentTime / duration) * 100 : 0}%` }}
             />
@@ -555,8 +560,8 @@ const VideoPlayer = ({ channel, onError, onLoad }) => {
             {/* Quality Selector */}
             {levels.length > 1 && (
               <div className="relative group/quality">
-                <button 
-                  className="p-2.5 hover:bg-white/10 rounded-xl transition-all cursor-pointer" 
+                <button
+                  className="p-2.5 hover:bg-white/10 rounded-xl transition-all cursor-pointer"
                   title="Quality"
                   type="button"
                 >
@@ -568,9 +573,8 @@ const VideoPlayer = ({ channel, onError, onLoad }) => {
                       e.stopPropagation();
                       changeQuality(-1);
                     }}
-                    className={`block w-full text-left px-4 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-                      currentLevel === -1 ? 'bg-purple-500/20 text-purple-400' : 'text-white hover:bg-white/10'
-                    }`}
+                    className={`block w-full text-left px-4 py-2 rounded-lg text-sm transition-colors cursor-pointer ${currentLevel === -1 ? 'bg-purple-500/20 text-purple-400' : 'text-white hover:bg-white/10'
+                      }`}
                     type="button"
                   >
                     Auto
@@ -582,9 +586,8 @@ const VideoPlayer = ({ channel, onError, onLoad }) => {
                         e.stopPropagation();
                         changeQuality(index);
                       }}
-                      className={`block w-full text-left px-4 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-                        currentLevel === index ? 'bg-purple-500/20 text-purple-400' : 'text-white hover:bg-white/10'
-                      }`}
+                      className={`block w-full text-left px-4 py-2 rounded-lg text-sm transition-colors cursor-pointer ${currentLevel === index ? 'bg-purple-500/20 text-purple-400' : 'text-white hover:bg-white/10'
+                        }`}
                       type="button"
                     >
                       {level.height}p
